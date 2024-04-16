@@ -32,38 +32,6 @@ jobs:
             npm install ${INSTALL_PACKAGE}
           fi
 
-      - name: Get all packages in repo
-        if: ${{ hashFiles('.installed') == '' }}
-        run: |
-          curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" -s "https://api.github.com/orgs/${{ github.repository_owner }}/repos" | jq -r '.[].full_name' > .installed
-
-          for package in $(cat .installed); do
-            if [ "${{ github.event.repository.full_name }}" != "${package}" ]; then
-              if [ ! -z "${{ vars.IGNORE_LIST || env.IGNORE_LIST || secrets.IGNORE_LIST }}" ]; then
-                if [[ "${{ vars.IGNORE_LIST || env.IGNORE_LIST || secrets.IGNORE_LIST }}" =~ (^|[[:space:]])${package}($|[[:space:]]) ]]; then
-                  continue
-                fi
-              fi
-              curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s "https://raw.githubusercontent.com/${package}/main/package.json" | jq -r '.name' >> .packages || echo "Failed: ${package}"
-              echo "Done: ${package}"
-            fi
-          done
-
-          if [ -f .packages ]; then
-            echo "Packages: $(cat .packages)";
-
-            for package in $(cat .packages); do
-              if [ ! -z "${{ vars.IGNORE_LIST || env.IGNORE_LIST || secrets.IGNORE_LIST }}" ]; then
-                if [[ "${{ vars.IGNORE_LIST || env.IGNORE_LIST || secrets.IGNORE_LIST }}" =~ (^|[[:space:]])${package}($|[[:space:]]) ]]; then
-                  continue
-                fi
-              fi
-              npm install ${package} || echo "Failed: ${package}"
-            done;
-
-            rm .packages
-          fi
-
       - name: Reinstall dependencies
         run: npm ci
 
